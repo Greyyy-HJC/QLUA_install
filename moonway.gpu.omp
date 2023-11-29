@@ -1,0 +1,270 @@
+#installation prefix
+PREFIX	?= /root/qlua
+
+#parallel jobs in make
+XJOBS   ?= 8
+
+# automake tools
+ACLOCAL	?= aclocal-1.13 
+AUTOMAKE?= automake-1.13
+
+# host machine C compiler
+UCC      = gcc -Wno-parentheses-equality
+#UCFLAGS  = -O2 -g -fopenmp
+UCFLAGS  = -O2 -fopenmp
+
+# target machine C compiler
+XCC      = mpicc -std=c99 -m64 -fopenmp -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE \
+              -Wno-unused-but-set-variable -Wno-unused-local-typedefs -Wno-unused-function -Wno-format-truncation
+#XCFLAGS  = -g
+#XCFLAGS  = -O2 -g
+XCFLAGS  = -O2
+XLDFLAGS =
+
+# Another target machine C compiler
+YCC      = mpicc -m64
+YCFLAGS  = $(XCFLAGS)
+YLDFLAGS = $(XLDFLAGS)
+
+# target machine C++ compiler
+XCXX      = mpic++ -std=gnu++11 -m64 -fopenmp -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE \
+	    -Wno-unused-but-set-variable -Wno-unused-local-typedefs -Wno-unused-function \
+	    -Wno-sign-compare -Wno-reorder -Wno-delete-non-virtual-dtor -Wno-dev -Wno-format-truncation
+XCXXFLAGS = $(XCFLAGS)
+
+# CUDA installation
+# FIXME use $CUBLAS_INCLUDES, $CUBLAS_LIBRARIES
+# TODO check dir $CUDA_HOME exists
+CUDA.root = /usr/local/cuda
+# target machine Fortran compiler
+XFC      = mpif77 -m64 -fopenmp -fno-underscoring
+XFEXTRAS = -frecursive
+#XFFLAGS  = -g
+#XFFLAGS  = -O2 -g
+XFFLAGS  = -O2 
+XFFLAGS0 = -O0 
+XTIMER   = INT_ETIME
+
+# TODO switch between mpich and openmpi
+#MPIF_LIBS   = -lfmpich
+MPIF_LIBS   = -lmpi_mpifh
+
+# target machine architecture for qa0
+XTARGET  = cee-64
+
+# target machine archiver
+XAR      = ar
+XRANLIB  = ranlib
+
+# number of colors in CLOVER
+XCLOVER_NC = 3
+# number of colors in TWISTED
+XTWISTED_NC = 3
+
+####### which parts to build
+LUA.build        = yes
+SFC.build        = yes
+QA0.build        = yes
+GSL.build        = yes
+ARPACK.build     = yes
+LAPACK.build     = yes
+AFF.build        = yes
+QMP.build        = yes
+HDF5.build       = yes
+QLA.build        = yes
+QIO.build        = yes
+QDP.build        = yes
+CLOVER.build     = yes
+TWISTED.build    = yes
+MDWF.build       = yes
+QOPQDP.build     = yes
+QUDA.build       = yes
+
+####### destinations
+AFF.dest     = $(PREFIX)/aff
+ARPACK.dest  = $(PREFIX)/arpack
+CLOVER.dest  = $(PREFIX)/clover
+TWISTED.dest = $(PREFIX)/twisted
+GSL.dest     = $(PREFIX)/gsl
+HDF5.dest    = $(PREFIX)/hdf5
+LAPACK.dest  = $(PREFIX)/lapack
+LUA.dest     = $(PREFIX)/lua
+MDWF.dest    = $(PREFIX)/mdwf
+QDP.dest     = $(PREFIX)/qdp
+QIO.dest     = $(PREFIX)/qio
+QLA.dest     = $(PREFIX)/qla
+QLUA.dest    = $(PREFIX)/qlua
+QMP.dest     = $(PREFIX)/qmp
+QOPQDP.dest  = $(PREFIX)/qopqdp
+QUDA.dest    = $(PREFIX)/quda
+
+QUDA_QLUA.dest = $(PREFIX)/quda
+####### configations
+
+LUA.cc     = $(XCC)
+LUA.cflags = $(XCFLAGS)
+LUA.ar     = $(XAR) cr
+LUA.ranlib = $(XRANLIB)
+
+SFC.cc    = $(UCC) $(UCFLAGS)
+
+QA0.cc      = $(UCC) $(UCFLAGS)
+
+GSL.config = CC="$(YCC)" \
+             CFLAGS="$(YCFLAGS)" \
+             --prefix="$(GSL.dest)" \
+             --disable-shared
+
+ARPACK.fc      = ${XFC}
+ARPACK.fflags  = ${XFFLAGS}
+ARPACK.pfc     = ${XFC}
+ARPACK.pfflags = ${XFFLAGS}
+ARPACK.mpilibs = ${XLIBS}
+ARPACK.skip_blas=1
+ARPACK.skip_lapack=1
+
+LAPACK.shell       = /bin/sh
+LAPACK.fortran     = $(XFC)
+LAPACK.opts        = $(XFFLAGS) $(XFEXTRAS)
+LAPACK.drvopts     = $(XFFLAGS)
+LAPACK.noopt       = $(XFFLAGS0) $(XFEXTRAS)
+LAPACK.loader      = $(XFC)
+LAPACK.loadopts    =
+LAPACK.timer       = $(XTIMER)
+LAPACK.cc          = $(XCC) -DNOCHANGE
+LAPACK.cflags      = $(XCFLAGS)
+LAPACK.arch        = $(XAR)
+LAPACK.archflags   = cr
+LAPACK.ranlib      = $(XRANLIB)
+
+AFF.cc     = $(XCC)
+AFF.cflags = $(XCFLAGS) -DHAS_INTEGRAL_OFF_T \
+                 -D_POSIX_C_SOURCE \
+                 -D_LARGEFILE_SOURCE \
+                 -D_FILE_OFFSET_BITS=64
+AFF.cxx       = $(XCXX)
+AFF.cxxflags  = $(XCXXFLAGS)
+AFF.ar        = $(XAR)
+AFF.ranlib    = $(XRANLIB)
+AFF.config    = linux
+
+QMP.config = CC="$(XCC) -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE" \
+             AR="ar" \
+             RANLIB="$(XRANLIB)" \
+             CFLAGS="$(XCFLAGS)" \
+             ACLOCAL=$(ACLOCAL) \
+             AUTOMAKE=$(AUTOMAKE) \
+             --with-qmp-comms-type=MPI \
+             --with-qmp-comms-libs='' \
+             --prefix="$(QMP.dest)"
+
+HDF5.config = CC="$(XCC)" \
+              CFLAGS="$(XCFLAGS)" \
+              LD="$(XCC)" \
+              --prefix="$(HDF5.dest)" \
+              --enable-parallel \
+	      --enable-static  --disable-shared \
+
+QLA.config = CC="$(XCC)" \
+             CFLAGS="$(XCFLAGS)" \
+	     --enable-openmp \
+             --prefix="$(QLA.dest)"
+
+QIO.config = CC="$(XCC)" \
+             CFLAGS="$(XCFLAGS)" \
+             --enable-parallel-arch=parscalar \
+	     --enable-dml-output-buffering \
+	     --enable-dml-bufsize=33554432 \
+             --enable-largefile \
+             --with-qmp="$(QMP.dest)" \
+             --prefix="$(QIO.dest)"
+
+QDP.config = CC="$(XCC)" \
+             CFLAGS="$(XCFLAGS)" \
+             --with-qmp="$(QMP.dest)" \
+             --with-qio="$(QIO.dest)" \
+             --with-qla="$(QLA.dest)" \
+             --prefix="$(QDP.dest)"
+
+CLOVER.cc     = $(XCC)
+CLOVER.cflags = $(XCFLAGS)
+CLOVER.nc     = $(XCLOVER_NC)
+CLOVER.target = $(XTARGET)
+CLOVER.config = --target="$(XTARGET)" \
+                --with-qdp="$(QDP.dest)" \
+                --with-qmp="$(QMP.dest)" \
+                --with-gsl="$(GSL.dest)" \
+                --prefix="$(CLOVER.dest)"
+
+TWISTED.cc     = $(XCC)
+TWISTED.cflags = $(XCFLAGS)
+TWISTED.nc     = $(XTWISTED_NC)
+TWISTED.target = $(XTARGET)
+TWISTED.config = --target="$(XTARGET)" \
+                --with-qdp="$(QDP.dest)" \
+                --with-qmp="$(QMP.dest)" \
+                --with-gsl="$(GSL.dest)" \
+                --prefix="$(TWISTED.dest)"
+
+MDWF.cc     = $(XCC)
+MDWF.cflags = $(XCFLAGS)
+MDWF.target = $(XTARGET)
+MDWF.config = --target="$(XTARGET)" \
+              --with-qmp="$(QMP.dest)" \
+              --with-gsl="$(GSL.dest)" \
+              --prefix="$(MDWF.dest)"
+
+QOPQDP.cc     = $(XCC)
+QOPQDP.cflags = $(XCFLAGS)
+QOPQDP.config = CC="$(XCC)" \
+                --with-qdp="$(QDP.dest)" \
+                --with-qla="$(QLA.dest)" \
+                --with-qio="$(QIO.dest)" \
+                --with-qmp="$(QMP.dest)" \
+                --prefix="$(QOPQDP.dest)" \
+                LDFLAGS="-L$(QDP.dest)/lib64 -L$(QLA.dest)/lib64 -L$(QIO.dest)/lib64" \
+                ACLOCAL=$(ACLOCAL) \
+                AUTOMAKE=$(AUTOMAKE)
+
+QUDA.cmake = -DQUDA_QMP=ON                \
+             -DQUDA_MPI=OFF               \
+             -DQUDA_QMPHOME=$(QMP.dest)   \
+	     -DQUDA_MULTIGRID=ON 	  \
+             -DQUDA_GPU_ARCH=sm_80	  \
+	     -DQUDA_BUILD_SHAREDLIB=ON 	  \
+	     -DQUDA_BUILD_ALL_TESTS=OFF	  \
+	     -DQUDA_LIBS=-lcublas	  \
+	     -DCUDA_TOOLKIT_INCLUDE=$(CUDA.root)/include \
+	     -DQUDA_TEX=OFF \
+	     -Wno-dev
+
+# FIXME use $CUBLAS_INCLUDES, $CUBLAS_LIBRARIES
+#QLUA.libs   = z cuda cublas cudart pthread dl gfortran stdc++
+QLUA.libs   = z cublas cudart pthread dl gfortran stdc++
+QLUA.cc     = $(XCC)  $(CUBLAS_INCLUDES)
+QLUA.cxx    = $(XCXX) -I$(CUDA.root)/include $(CUBLAS_INCLUDES)
+QLUA.fc     = $(XFC)
+QLUA.ld     = $(XCC) -fopenmp -Xlinker -rpath -Xlinker $(CUDA.root)/lib64 -L$(CUDA.root)/lib64
+QLUA.cflags = $(XCFLAGS)
+QLUA.cxxflags= $(XCXXFLAGS) -I$(LAPACK.dest)/include
+QLUA.config = --with-lua="$(LUA.dest)"        \
+              --with-qdp="$(QDP.dest)"        \
+              --with-lhpc-aff="$(AFF.dest)"   \
+              --with-hdf5="$(HDF5.dest)"      \
+              --with-qopqdp="$(QOPQDP.dest)" \
+	      --with-la-libs="-L$(LAPACK.dest)/lib -llapacke -llapack -lcblas -lrefblas $(CUBLAS_LIBRARIES)" \
+              --with-mdwf="$(MDWF.dest)" \
+              --with-clover="$(CLOVER.dest)" \
+              --clover-nc=$(XCLOVER_NC) \
+              --with-twisted="$(TWISTED.dest)" \
+              --twisted-nc=$(XTWISTED_NC) \
+              --with-gsl="$(GSL.dest)"        \
+              --with-nc=N                     \
+              --with-nc=3                     \
+              --with-extras \
+              --with-quda="$(QUDA.dest)"      \
+              --with-cuda="$(CUDA.root)"      \
+              --prefix="$(QLUA.dest)"
+
+
+#              --with-arpack="-L"$(LAPACK.dest)/lib" -L"$(ARPACK.dest)/lib" -lparpack $(MPIF_LIBS) -larpack -llapacke -llapack -lcblas -lrefblas" \
