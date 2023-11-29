@@ -2,10 +2,7 @@
 Repo to install the QLUA software for Lattice QCD.
 
 
-
-# Step by step installation of QLUA
-
-## 0. Prerequisites
+### 0. Prerequisites
 
 First, the host machine should have NVIDIA GPU and the driver should be installed. Second, we would like to use Docker to build a clean environment to install QLUA. So the host machine should have Docker (or Podman) installed. Third, to use GPU in the container, we need to install nvidia-container-toolkit and modify some settings. The following steps are the prerequisites.
 
@@ -13,6 +10,7 @@ First, the host machine should have NVIDIA GPU and the driver should be installe
 ```bash
     nvidia-smi
 ```
+
 - 2. Install nvidia-container-toolkit, check with the following command.
 ```bash
     which nvidia-container-toolkit
@@ -49,21 +47,32 @@ First, the host machine should have NVIDIA GPU and the driver should be installe
 ```
 
 
-## 1. Get basic environment with Docker
+### One step from my image
+
+```bash
+    docker pull docker.io/greyyyhjc/qlua_cuda_11.2:latest
+
+    docker run --name qlua_container --hooks-dir=/usr/share/containers/oci/hooks.d/ --runtime=nvidia -it greyyyhjc/qlua_cuda_11.2
+```
+
+
+### Step by step from the NVIDIA CUDA image
+
+#### 1. Get basic environment with Docker
 We will use Docker (or Podman) to build a clean environment to install QLUA.
 
-### 1.1 Get the basic environment
+#### 1.1 Get the basic environment
 ```bash
     docker pull nvidia/cuda:11.2.2-devel-ubuntu20.04
 ```
 
-### 1.2 Build a image with necessary packages
+#### 1.2 Build a image with necessary packages
 Run the following command in the same directory as the [Dockerfile](/Dockerfile).
 ```bash
     docker build -t qlua_env .
 ```
 
-### 1.3 Run the image
+#### 1.3 Run the image
 Build a container (qlua_container) with the image (qlua_env) we defined and run it.
 ```bash
     docker run --name qlua_container --security-opt=label=disable --hooks-dir=/usr/share/containers/oci/hooks.d/ --runtime=nvidia -it qlua_env
@@ -74,9 +83,9 @@ Then a bash shell will be opened in the container. We can install the QLUA in th
     nvidia-smi
 ```
 
-## 2. Download packages
+#### 2. Download packages
 
-### 2.1 Download build2
+#### 2.1 Download build2
 Here we need to firstly forbid SSL verify, because the mit git source is not trusted.
 ```bash
     git config --global http.sslVerify false
@@ -90,7 +99,7 @@ Go to the build2 directory and checkout the version we need.
     git submodule update
 ```
 
-### 2.2 Download QUDA and update the submodule
+#### 2.2 Download QUDA and update the submodule
 ```bash
     cd parts/quda/tree
     git remote add mit-gitweb https://urldefense.com/v3/__https:/usqcd.lns.mit.edu/git/LHPC/Public/alien-libs/quda.git
@@ -99,7 +108,7 @@ Go to the build2 directory and checkout the version we need.
     git submodule update
 ```
 
-### 2.3 Check the version of submodules
+#### 2.3 Check the version of submodules
 In this step, we need to check the version of submodules. If the version is not the same as the one we need, we need to checkout the correct version.
 
 Go to the directory of [check_hash.sh](/check_hash.sh) and [submodule_hash_ls.txt](/submodule_hash_ls.txt), run the following command.
@@ -107,7 +116,7 @@ Go to the directory of [check_hash.sh](/check_hash.sh) and [submodule_hash_ls.tx
     bash check_hash.sh
 ```
 
-### 2.4 Modify some files
+#### 2.4 Modify some files
 In this step, we need to modify some files to make sure the installation can be done successfully.
 
 - 1. In the file "build2/parts/quda/tree/CMakeLists.txt", change the line 237 and 238 to the following.
@@ -143,7 +152,7 @@ The directory of CUDA can be found by the following command.
     which nvcc
 ```
 
-## 3. Compile all modules
+#### 3. Compile all modules
 ```bash
     cd build2
     make -j 8 TARGET=moonway.gpu.omp
@@ -151,7 +160,7 @@ The directory of CUDA can be found by the following command.
 
 The compilation will take a long time and maybe need to make few times. You can modify "which parts to build" in the config file to separate the compilation into several parts.
 
-### 3.1 Add environment variables
+#### 3.1 Add environment variables
 Find the directory of libquda.so by the following command.
 ```bash
     find / -name libquda.so 2>/dev/null
@@ -161,7 +170,7 @@ Add it to the environment variables in "~/.bashrc".
     export LD_LIBRARY_PATH=/path/to/quda/lib:$LD_LIBRARY_PATH
 ```
 
-## 4. Test QLUA
+#### 4. Test QLUA
 Find the executable "qlua" file in the directory "build2/parts/qlua/tree", run it should get the following output.
 ```
 QLUA component versions:
