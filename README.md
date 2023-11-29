@@ -66,7 +66,7 @@ Run the following command in the same directory as the [Dockerfile](/Dockerfile)
 ### 1.3 Run the image
 Build a container (qlua_container) with the image (qlua_env) we defined and run it.
 ```bash
-    docker run --name qlua_container --security-opt=label=disable --hooks-dir=/usr/share/containers/oci/hooks.d/ --runtime=nvidia --rm -it qlua_env
+    docker run --name qlua_container --security-opt=label=disable --hooks-dir=/usr/share/containers/oci/hooks.d/ --runtime=nvidia -it qlua_env
 ```
 
 Then a bash shell will be opened in the container. We can install the QLUA in this shell. Check the nvidia driver and GPU with the following command.
